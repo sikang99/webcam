@@ -46,5 +46,12 @@ func Open(path string) (Webcam, error) {
 	}
 
 	fmt.Printf("Capabilities: %+v\n", caps)
+
+	formats, err := getSupportedFormats(file.Fd())
+	if err != nil {
+		return Webcam{}, WebcamError{path, "getting supported formats from", err.Error()}
+	}
+	fmt.Printf("Formats: %+v\n", formats)
+
 	return Webcam{}, nil
 }

@@ -17,6 +17,11 @@ type deviceCapabilities struct {
 	canCapture bool
 }
 
+type supportedFormat struct {
+	format      uint32
+	description string
+}
+
 func getCapabilities(fd uintptr) (deviceCapabilities, error) {
 	caps, err := C.webcam_capability(C.int(fd))
 
@@ -38,4 +43,32 @@ func getCapabilities(fd uintptr) (deviceCapabilities, error) {
 	ret.canCapture = bool(caps.capabilities&C.V4L2_CAP_VIDEO_CAPTURE != 0)
 
 	return ret, nil
+}
+
+func getSupportedFormats(fd uintptr) ([]supportedFormat, error) {
+	formats := make([]supportedFormat, 0, 16)
+
+	for i := 0; ; i++ {
+		format, err := C.webcam_supported_formats(C.int(fd), C.int(i))
+
+		if unsafe.Pointer(format) == unsafe.Pointer(uintptr(0)) {
+			return formats, errors.New("cannot allocate memory")
+		} else {
+			defer C.free(unsafe.Pointer(format))
+		}
+
+		if err != nil {
+			if len(formats) == 0 {
+				return formats, err
+			} else {
+				break
+			}
+		}
+
+		var dest supportedFormat
+		dest.format = uint32(format.pixelformat)
+		dest.description = C.GoString((*C.char)(unsafe.Pointer(&format.description[0])))
+		formats = append(formats, dest)
+	}
+	return formats, nil
 }

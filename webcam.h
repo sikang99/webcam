@@ -136,7 +136,19 @@ struct v4l2_capability *webcam_capability(int fd)
     return cap;
 }
 
+struct v4l2_fmtdesc* webcam_supported_formats(int fd, int idx)
+{
+    typedef struct v4l2_fmtdesc fmtdesc;
+    fmtdesc *format = calloc(1,sizeof(fmtdesc));
 
+    fprintf(stderr, "index: %d\n", idx);
+
+    format->index = idx;
+    format->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+    fprintf(stderr, "result: %d\n", _ioctl(fd, VIDIOC_ENUM_FMT, &format));
+    return format;
+}
 
 /**
  * Open the webcam on the given device and return a webcam
