@@ -103,3 +103,42 @@ func resize(fd uintptr, width uint16, height uint16) (ImageFormat, error) {
 
 	return result, nil
 }
+
+func requestBuffers(fd uintptr) (Buffer, error) {
+	buf, err := C.webcam_query_buffer(C.int(fd))
+	var result Buffer
+	result.data = unsafe.Pointer(buf.start)
+	result.length = uintptr(buf.length)
+	return result, err
+}
+
+func startStreaming(fd uintptr) error {
+	ptrErr := C.webcam_start_streaming(C.int(fd))
+	if ptrErr == nil {
+		return nil
+	} else {
+		return errors.New(ptrToString(unsafe.Pointer(ptrErr)))
+	}
+}
+
+func stopStreaming(fd uintptr) error {
+	ptrErr := C.webcam_stop_streaming(C.int(fd))
+	if ptrErr == nil {
+		return nil
+	} else {
+		return errors.New(ptrToString(unsafe.Pointer(ptrErr)))
+	}
+}
+
+func read(fd uintptr) error {
+	ptrErr := C.webcam_read(C.int(fd))
+	if ptrErr == nil {
+		return nil
+	} else {
+		return errors.New(ptrToString(unsafe.Pointer(ptrErr)))
+	}
+}
+
+func data(buf Buffer) []byte {
+	return C.GoBytes(buf.data, C.int(buf.length))
+}

@@ -59,5 +59,26 @@ func Open(path string) (Webcam, error) {
 	}
 	fmt.Printf("Resized to format: %+v\n", format)
 
+	buffer, err := requestBuffers(file.Fd())
+	if err != nil {
+		return Webcam{}, WebcamError{path, "requesting shared buffers", err.Error()}
+	}
+
+	err = startStreaming(file.Fd())
+	if err != nil {
+		return Webcam{}, WebcamError{path, "starting streaming from", err.Error()}
+	}
+
+	for i := 0; i < 10; i++ {
+		err = read(file.Fd())
+		if err != nil {
+			return Webcam{}, WebcamError{path, "error reading from", err.Error()}
+		}
+		fmt.Printf("Buffer: %+v\n", buffer)
+
+		b := data(buffer)
+		fmt.Println(len(b))
+	}
+
 	return Webcam{}, nil
 }

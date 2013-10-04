@@ -1,5 +1,7 @@
 package webcam
 
+import "unsafe"
+
 type DeviceCapabilities struct {
 	driver     string
 	card       string
@@ -18,6 +20,11 @@ type ImageFormat struct {
 	heigth      uint32
 	pixelformat string
 	colorspace  Colorspace
+}
+
+type Buffer struct {
+	data   unsafe.Pointer
+	length uintptr
 }
 
 // Corresponding enum v4l2_colorspace from <linux/videodev2.h>
