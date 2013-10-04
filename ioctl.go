@@ -5,6 +5,8 @@ package webcam
 // #include <stdlib.h>
 import "C"
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"unsafe"
 )
@@ -18,7 +20,7 @@ type deviceCapabilities struct {
 }
 
 type supportedFormat struct {
-	format      uint32
+	format      string
 	description string
 }
 
@@ -66,7 +68,12 @@ func getSupportedFormats(fd uintptr) ([]supportedFormat, error) {
 		}
 
 		var dest supportedFormat
-		dest.format = uint32(format.pixelformat)
+
+		//Convert 4-byte int to 4-byte string
+		buf := new(bytes.Buffer)
+		binary.Write(buf, binary.LittleEndian, format.pixelformat)
+		dest.format = string(buf.Bytes()[:4])
+
 		dest.description = C.GoString((*C.char)(unsafe.Pointer(&format.description[0])))
 		formats = append(formats, dest)
 	}
