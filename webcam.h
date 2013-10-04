@@ -148,162 +148,99 @@ struct v4l2_fmtdesc* webcam_supported_formats(int fd, int idx)
     return format;
 }
 
-/**
- * Open the webcam on the given device and return a webcam
- * structure.
- */
-/*struct webcam *webcam_open(const char *dev)*/
-/*{*/
-    /*struct stat st;*/
-
-    /*struct v4l2_format fmt;*/
-
-    /*uint16_t min;*/
-
-    /*int fd;*/
-    /*struct webcam *w;*/
-
-
-
-    /*// Request supported formats*/
-    /*struct v4l2_fmtdesc fmtdesc;*/
-    /*uint32_t idx = 0;*/
-    /*char *pixelformat = calloc(5, sizeof(char));*/
-    /*for(;;) {*/
-        /*fmtdesc.index = idx;*/
-        /*fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;*/
-
-        /*if (-1 == _ioctl(w->fd, VIDIOC_ENUM_FMT, &fmtdesc)) break;*/
-
-        /*memset(w->formats[idx], 0, 5);*/
-        /*memcpy(&w->formats[idx][0], &fmtdesc.pixelformat, 4);*/
-        /*fprintf(stderr, "%s: Found format: %s - %s\n", w->name, w->formats[idx], fmtdesc.description);*/
-        /*idx++;*/
-    /*}*/
-
-    /*return w;*/
-/*}*/
-
-/**
- * Closes the webcam
- *
- * Also releases the buffers, and frees up memory
- */
-void webcam_close(webcam_t *w)
+struct v4l2_format* webcam_resize(int fd, uint16_t width, uint16_t height)
 {
-    uint16_t i;
-
-    // Clear frame
-    free(w->frame.start);
-    w->frame.length = 0;
-
-    // Release memory-mapped buffers
-    for (i = 0; i < w->nbuffers; i++) {
-        munmap(w->buffers[i].start, w->buffers[i].length);
+    typedef struct v4l2_format format;
+    format *fmt = calloc(1,sizeof(format));
+    if (fmt==NULL) {
+        return fmt;
     }
 
-    // Free allocated resources
-    free(w->buffers);
-    free(w->name);
+    // Use YUYV as default for now
+    fmt->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    fmt->fmt.pix.width = width;
+    fmt->fmt.pix.height = height;
+    fmt->fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+    fmt->fmt.pix.colorspace = V4L2_COLORSPACE_REC709;
 
-    // Close the webcam file descriptor, and free the memory
-    close(w->fd);
-    free(w);
+    _ioctl(fd, VIDIOC_S_FMT, fmt);
+
+    return fmt;
 }
 
 /**
  * Sets the webcam to capture at the given width and height
  */
-void webcam_resize(webcam_t *w, uint16_t width, uint16_t height)
-{
-    uint32_t i;
-    struct v4l2_format fmt;
-    struct v4l2_buffer buf;
+/*void webcam_resize(webcam_t *w, uint16_t width, uint16_t height)*/
+/*{*/
+    /*uint32_t i;*/
+    /*struct v4l2_buffer buf;*/
 
-    // Use YUYV as default for now
-    CLEAR(fmt);
-    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    fmt.fmt.pix.width = width;
-    fmt.fmt.pix.height = height;
-    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
-    fmt.fmt.pix.colorspace = V4L2_COLORSPACE_REC709;
-    fprintf(stderr, "%s: requesting image format %ux%u\n", w->name, width, height);
-    _ioctl(w->fd, VIDIOC_S_FMT, &fmt);
+    /*// Buffers have been created before, so clear them*/
+    /*if (NULL != w->buffers) {*/
+        /*for (i = 0; i < w->nbuffers; i++) {*/
+            /*munmap(w->buffers[i].start, w->buffers[i].length);*/
+        /*}*/
 
-    // Storing result
-    w->width = fmt.fmt.pix.width;
-    w->height = fmt.fmt.pix.height;
-    w->colorspace = fmt.fmt.pix.colorspace;
+        /*free(w->buffers);*/
+    /*}*/
 
-    char *pixelformat = calloc(5, sizeof(char));
-    memcpy(pixelformat, &fmt.fmt.pix.pixelformat, 4);
-    fprintf(stderr, "%s: set image format to %ux%u using %s\n", w->name, w->width, w->height, pixelformat);
+    /*// Request the webcam's buffers for memory-mapping*/
+    /*struct v4l2_requestbuffers req;*/
+    /*CLEAR(req);*/
 
-    // Buffers have been created before, so clear them
-    if (NULL != w->buffers) {
-        for (i = 0; i < w->nbuffers; i++) {
-            munmap(w->buffers[i].start, w->buffers[i].length);
-        }
+    /*req.count = 4;*/
+    /*req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;*/
+    /*req.memory = V4L2_MEMORY_MMAP;*/
 
-        free(w->buffers);
-    }
+    /*if (-1 == _ioctl(w->fd, VIDIOC_REQBUFS, &req)) {*/
+        /*if (EINVAL == errno) {*/
+            /*fprintf(stderr, "%s does not support memory mapping\n", w->name);*/
+            /*return;*/
+        /*} else {*/
+            /*fprintf(stderr, "Unknown error with VIDIOC_REQBUFS: %d\n", errno);*/
+            /*return;*/
+        /*}*/
+    /*}*/
 
-    // Request the webcam's buffers for memory-mapping
-    struct v4l2_requestbuffers req;
-    CLEAR(req);
+    /*// Needs at least 2 buffers*/
+    /*if (req.count < 2) {*/
+        /*fprintf(stderr, "Insufficient buffer memory on %s\n", w->name);*/
+        /*return;*/
+    /*}*/
 
-    req.count = 4;
-    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    req.memory = V4L2_MEMORY_MMAP;
+    /*// Storing buffers in webcam structure*/
+    /*fprintf(stderr, "Preparing %d buffers for %s\n", req.count, w->name);*/
+    /*w->nbuffers = req.count;*/
+    /*w->buffers = calloc(w->nbuffers, sizeof(struct buffer));*/
 
-    if (-1 == _ioctl(w->fd, VIDIOC_REQBUFS, &req)) {
-        if (EINVAL == errno) {
-            fprintf(stderr, "%s does not support memory mapping\n", w->name);
-            return;
-        } else {
-            fprintf(stderr, "Unknown error with VIDIOC_REQBUFS: %d\n", errno);
-            return;
-        }
-    }
+    /*if (!w->buffers) {*/
+        /*fprintf(stderr, "Out of memory\n");*/
+        /*return;*/
+    /*}*/
 
-    // Needs at least 2 buffers
-    if (req.count < 2) {
-        fprintf(stderr, "Insufficient buffer memory on %s\n", w->name);
-        return;
-    }
+    /*// Prepare buffers to be memory-mapped*/
+    /*for (i = 0; i < w->nbuffers; ++i) {*/
+        /*CLEAR(buf);*/
 
-    // Storing buffers in webcam structure
-    fprintf(stderr, "Preparing %d buffers for %s\n", req.count, w->name);
-    w->nbuffers = req.count;
-    w->buffers = calloc(w->nbuffers, sizeof(struct buffer));
+        /*buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;*/
+        /*buf.memory = V4L2_MEMORY_MMAP;*/
+        /*buf.index = i;*/
 
-    if (!w->buffers) {
-        fprintf(stderr, "Out of memory\n");
-        return;
-    }
+        /*if (-1 == _ioctl(w->fd, VIDIOC_QUERYBUF, &buf)) {*/
+            /*fprintf(stderr, "Could not query buffers on %s\n", w->name);*/
+            /*return;*/
+        /*}*/
 
-    // Prepare buffers to be memory-mapped
-    for (i = 0; i < w->nbuffers; ++i) {
-        CLEAR(buf);
+        /*w->buffers[i].length = buf.length;*/
+        /*w->buffers[i].start = mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, w->fd, buf.m.offset);*/
 
-        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        buf.memory = V4L2_MEMORY_MMAP;
-        buf.index = i;
-
-        if (-1 == _ioctl(w->fd, VIDIOC_QUERYBUF, &buf)) {
-            fprintf(stderr, "Could not query buffers on %s\n", w->name);
-            return;
-        }
-
-        w->buffers[i].length = buf.length;
-        w->buffers[i].start = mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, w->fd, buf.m.offset);
-
-        if (MAP_FAILED == w->buffers[i].start) {
-            fprintf(stderr, "Mmap failed\n");
-            return;
-        }
-    }
-}
+        /*if (MAP_FAILED == w->buffers[i].start) {*/
+            /*fprintf(stderr, "Mmap failed\n");*/
+            /*return;*/
+        /*}*/
+    /*}*/
+/*}*/
 
 /**
  * Reads a frame from the webcam, converts it into the RGB colorspace

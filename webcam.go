@@ -53,5 +53,11 @@ func Open(path string) (Webcam, error) {
 	}
 	fmt.Printf("Formats: %+v\n", formats)
 
+	format, err := resize(file.Fd(), 640, 480)
+	if err != nil {
+		return Webcam{}, WebcamError{path, "resizing", err.Error()}
+	}
+	fmt.Printf("Resized to format: %+v\n", format)
+
 	return Webcam{}, nil
 }
